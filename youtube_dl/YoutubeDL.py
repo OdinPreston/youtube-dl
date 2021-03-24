@@ -1896,6 +1896,18 @@ class YoutubeDL(object):
         self._write_thumbnails(info_dict, filename)
 
         if not self.params.get('skip_download', False):
+
+            def cleanup_thumbnails(self, info_dict):
+                if self.params.get('writethumbnail', True) and\
+                   self.params.get('write_all_thumbnails', True):
+                    return
+                thumbnails = info_dict.get('thumbnails')
+                for t in thumbnails:
+                    try:
+                        os.remove(t['filename'])
+                    except (IOError, OSError):
+                        self.report_warning('Unable to remove thumbnail file %s' % t['filename'])
+
             try:
                 def dl(name, info):
                     fd = get_suitable_downloader(info, self.params)(self, self.params)
@@ -1966,11 +1978,14 @@ class YoutubeDL(object):
                     # Just a single file
                     success = dl(filename, info_dict)
             except (compat_urllib_error.URLError, compat_http_client.HTTPException, socket.error) as err:
+                cleanup_thumbnails(self, info_dict)
                 self.report_error('unable to download video data: %s' % error_to_compat_str(err))
                 return
             except (OSError, IOError) as err:
+                cleanup_thumbnails(self, info_dict)
                 raise UnavailableVideoError(err)
             except (ContentTooShortError, ) as err:
+                cleanup_thumbnails(self, info_dict)
                 self.report_error('content too short (expected %s bytes and served %s)' % (err.expected, err.downloaded))
                 return
 
